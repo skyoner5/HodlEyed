@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+<title>HodlEye — AI Portfolio Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --gold:#F0B90B;--gold2:#ffd740;
+  --bg:#07090C;--s1:#0D1018;--s2:#131720;--s3:#1a2030;
+  --border:#1e2636;--text:#dde3f0;--muted:#4a5568;--muted2:#6b7a96;
+  --green:#0ecb81;--red:#f6465d;--blue:#3b82f6;
+  --r:12px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html{height:100%;}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;min-height:100%;overflow-x:hidden;}
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse at 10% 10%,rgba(240,185,11,.05),transparent 55%),radial-gradient(ellipse at 90% 90%,rgba(59,130,246,.04),transparent 55%);pointer-events:none;z-index:0;}
+
+/* HEADER */
+header{position:sticky;top:0;z-index:200;display:flex;align-items:center;gap:12px;padding:0 16px;height:56px;border-bottom:1px solid var(--border);background:rgba(7,9,12,.96);backdrop-filter:blur(16px);}
+.logo{display:flex;align-items:center;gap:8px;font-family:'Bebas Neue',sans-serif;font-size:1.4rem;letter-spacing:1px;color:var(--text);text-decoration:none;}
+.logo-icon{width:28px;height:28px;background:var(--gold);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:.9rem;flex-shrink:0;}
+.logo em{color:var(--gold);font-style:normal;}
+.hd-right{margin-left:auto;display:flex;align-items:center;gap:8px;}
+.live-pill{display:flex;align-items:center;gap:5px;font-family:'DM Mono',monospace;font-size:.68rem;color:var(--green);}
+.live-pill::before{content:'';width:5px;height:5px;background:var(--green);border-radius:50%;animation:blink 1.4s infinite;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+.bnb-pill{display:none;align-items:center;gap:6px;background:var(--s2);border:1px solid var(--border);border-radius:7px;padding:4px 10px;font-family:'DM Mono',monospace;font-size:.72rem;}
+.bnb-pill .sym{color:var(--gold);}
+.bnb-pill .chg{color:var(--green);}
+@media(min-width:480px){.bnb-pill{display:flex;}}
+.connect-btn{background:var(--gold);color:#000;border:none;border-radius:8px;padding:6px 14px;font-family:'DM Sans',sans-serif;font-weight:700;font-size:.78rem;cursor:pointer;white-space:nowrap;}
+.connect-btn:active{transform:scale(.97);}
+
+/* PAGE */
+.page{position:relative;z-index:1;}
+@media(min-width:769px){
+  .page{display:grid;grid-template-columns:1fr 360px;align-items:start;}
+  .left-col{overflow-y:auto;max-height:calc(100vh - 56px);}
+  .right-col{border-left:1px solid var(--border);height:calc(100vh - 56px);display:flex;flex-direction:column;}
+}
+
+/* TABS */
+.tabs{display:flex;gap:5px;padding:14px 14px 0;overflow-x:auto;flex-shrink:0;}
+.tabs::-webkit-scrollbar{display:none;}
+.tab-btn{background:transparent;border:1px solid var(--border);color:var(--muted2);padding:6px 14px;border-radius:20px;font-family:'DM Sans',sans-serif;font-size:.78rem;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0;transition:.15s;}
+.tab-btn.active,.tab-btn:hover{background:rgba(240,185,11,.08);border-color:rgba(240,185,11,.25);color:var(--gold);}
+
+/* VIEWS */
+.view{display:none;padding:14px;padding-bottom:90px;animation:fadeIn .2s ease;}
+.view.active{display:block;}
+@media(min-width:769px){.view{padding-bottom:20px;}}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+@keyframes up{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+/* SCORE BANNER */
+.score-banner{background:linear-gradient(135deg,rgba(240,185,11,.1),rgba(240,185,11,.03));border:1px solid rgba(240,185,11,.2);border-radius:var(--r);padding:14px 16px;display:flex;align-items:center;gap:14px;cursor:pointer;margin-bottom:14px;}
+.score-circle{width:50px;height:50px;border-radius:50%;background:conic-gradient(var(--gold) 302deg,var(--s3) 302deg);display:flex;align-items:center;justify-content:center;flex-shrink:0;position:relative;}
+.score-circle::before{content:'';position:absolute;width:38px;height:38px;background:var(--bg);border-radius:50%;}
+.score-num{position:relative;z-index:1;font-family:'Bebas Neue',sans-serif;font-size:1rem;color:var(--gold);}
+.score-info{flex:1;min-width:0;}
+.score-title{font-weight:700;font-size:.9rem;}
+.score-sub{font-size:.7rem;color:var(--muted2);margin-top:2px;}
+.score-badge{background:rgba(14,203,129,.12);color:var(--green);font-size:.66rem;font-weight:700;padding:3px 9px;border-radius:20px;flex-shrink:0;}
+
+/* STATS */
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;}
+@media(min-width:600px){.stats-grid{grid-template-columns:repeat(4,1fr);}}
+.stat-card{background:var(--s1);border:1px solid var(--border);border-radius:var(--r);padding:13px 14px;animation:up .35s ease both;}
+.stat-card:nth-child(1){animation-delay:.05s}.stat-card:nth-child(2){animation-delay:.1s}
+.stat-card:nth-child(3){animation-delay:.15s}.stat-card:nth-child(4){animation-delay:.2s}
+.stat-label{font-size:.63rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;}
+.stat-val{font-family:'DM Mono',monospace;font-size:1.15rem;}
+.stat-chg{font-size:.7rem;font-weight:600;margin-top:3px;}
+.up{color:var(--green);}.down{color:var(--red);}
+
+/* BNB SPOTLIGHT */
+.bnb-spot{background:linear-gradient(135deg,rgba(240,185,11,.07),rgba(240,185,11,.02));border:1px solid rgba(240,185,11,.18);border-radius:var(--r);padding:14px 16px;margin-bottom:14px;}
+.bnb-spot-hd{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+.bnb-icon{width:28px;height:28px;background:var(--gold);border-radius:7px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.78rem;color:#000;flex-shrink:0;}
+.bnb-spot-title{font-weight:700;font-size:.86rem;}
+.bnb-spot-sub{font-size:.67rem;color:var(--muted2);}
+.bnb-metrics{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+@media(min-width:480px){.bnb-metrics{grid-template-columns:repeat(4,1fr);}}
+.bnb-m{background:rgba(0,0,0,.3);border:1px solid rgba(240,185,11,.07);border-radius:8px;padding:10px 11px;}
+.bm-label{font-size:.6rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;}
+.bm-val{font-family:'DM Mono',monospace;font-size:.9rem;}
+.bm-sub{font-size:.65rem;color:var(--muted2);margin-top:2px;}
+
+/* HOLDINGS */
+.holdings-card{background:var(--s1);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:14px;}
+.holdings-hd{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:8px;}
+.holdings-title{font-weight:700;font-size:.86rem;}
+.filter-row{display:flex;gap:5px;}
+.fbtn{background:transparent;border:1px solid var(--border);color:var(--muted2);padding:4px 10px;border-radius:6px;font-size:.7rem;font-family:'DM Sans',sans-serif;font-weight:600;cursor:pointer;transition:.15s;}
+.fbtn.active,.fbtn:hover{background:rgba(240,185,11,.07);border-color:rgba(240,185,11,.25);color:var(--gold);}
+.table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+table{width:100%;border-collapse:collapse;min-width:500px;}
+thead th{text-align:left;font-size:.58rem;color:var(--muted);font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:9px 16px;border-bottom:1px solid var(--border);white-space:nowrap;}
+thead th:not(:first-child){text-align:right;}
+tbody tr{border-bottom:1px solid rgba(30,38,54,.6);cursor:pointer;transition:background .12s;}
+tbody tr:hover{background:rgba(240,185,11,.025);}
+tbody tr:last-child{border-bottom:none;}
+td{padding:11px 16px;font-size:.8rem;font-weight:500;text-align:right;white-space:nowrap;}
+td:first-child{text-align:left;}
+.asset-cell{display:flex;align-items:center;gap:9px;}
+.a-icon{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:.9rem;font-weight:800;flex-shrink:0;}
+.a-name{font-weight:700;font-size:.82rem;}
+.a-sym{font-size:.65rem;color:var(--muted2);font-family:'DM Mono',monospace;margin-top:1px;}
+.mono{font-family:'DM Mono',monospace;}
+.spark{display:flex;align-items:flex-end;gap:2px;height:18px;justify-content:flex-end;}
+.spark-b{width:3px;border-radius:2px;}
+
+/* TWO COL */
+.two-col{display:grid;grid-template-columns:1fr;gap:10px;margin-bottom:14px;}
+@media(min-width:560px){.two-col{grid-template-columns:1fr 1fr;}}
+.mini-card{background:var(--s1);border:1px solid var(--border);border-radius:var(--r);padding:14px;}
+.mini-title{font-size:.62rem;font-weight:700;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:11px;}
+.alloc-list{display:flex;flex-direction:column;gap:8px;}
+.alloc-row{display:flex;align-items:center;gap:8px;}
+.alloc-dot{width:7px;height:7px;border-radius:2px;flex-shrink:0;}
+.alloc-name{font-size:.76rem;font-weight:600;width:36px;}
+.alloc-bar-wrap{flex:1;height:4px;background:var(--border);border-radius:2px;overflow:hidden;}
+.alloc-bar-fill{height:100%;border-radius:2px;transition:width 1.2s cubic-bezier(.16,1,.3,1);}
+.alloc-pct{font-family:'DM Mono',monospace;font-size:.68rem;color:var(--muted2);width:34px;text-align:right;}
+.txn-list{display:flex;flex-direction:column;gap:6px;}
+.txn-row{display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--s2);border-radius:7px;}
+.txn-type{font-size:.6rem;font-weight:700;padding:2px 6px;border-radius:4px;font-family:'DM Mono',monospace;flex-shrink:0;}
+.txn-type.buy{background:rgba(14,203,129,.12);color:var(--green);}
+.txn-type.sell{background:rgba(246,70,93,.12);color:var(--red);}
+.txn-name{font-weight:600;flex:1;font-size:.78rem;}
+.txn-amt{font-family:'DM Mono',monospace;font-size:.7rem;color:var(--muted2);}
+
+/* MARKETS */
+.market-list{display:flex;flex-direction:column;gap:8px;}
+.market-row{background:var(--s1);border:1px solid var(--border);border-radius:var(--r);padding:13px 14px;display:flex;align-items:center;gap:11px;transition:border-color .15s;}
+.market-row:hover{border-color:rgba(240,185,11,.2);}
+.m-name{font-weight:700;font-size:.86rem;}
+.m-sym{font-size:.66rem;color:var(--muted2);font-family:'DM Mono',monospace;}
+.m-right{margin-left:auto;text-align:right;}
+.m-price{font-family:'DM Mono',monospace;font-size:.88rem;}
+.m-chg{font-size:.72rem;font-weight:600;margin-top:2px;}
+
+/* EARN */
+.earn-grid{display:grid;grid-template-columns:1fr;gap:10px;}
+@media(min-width:480px){.earn-grid{grid-template-columns:1fr 1fr;}}
+.earn-card{background:var(--s1);border:1px solid var(--border);border-radius:var(--r);padding:16px;transition:border-color .2s;}
+.earn-card:hover{border-color:rgba(240,185,11,.25);}
+.earn-icon{font-size:1.6rem;margin-bottom:8px;}
+.earn-name{font-weight:700;font-size:.88rem;margin-bottom:4px;}
+.earn-desc{font-size:.72rem;color:var(--muted2);line-height:1.5;margin-bottom:10px;}
+.earn-apy{font-family:'Bebas Neue',sans-serif;font-size:1.8rem;color:var(--green);}
+.earn-apy-label{font-size:.62rem;color:var(--muted);font-weight:600;letter-spacing:1px;text-transform:uppercase;}
+.earn-btn{margin-top:12px;width:100%;background:rgba(240,185,11,.1);border:1px solid rgba(240,185,11,.25);color:var(--gold);padding:9px;border-radius:8px;font-family:'DM Sans',sans-serif;font-weight:700;font-size:.78rem;cursor:pointer;transition:.15s;}
+.earn-btn:hover{background:rgba(240,185,11,.18);}
+.earn-btn:active{transform:scale(.98);}
+
+/* ALERTS */
+.alert-form{background:var(--s1);border:1px solid var(--border);border-radius:var(--r);padding:16px;margin-bottom:12px;}
+.form-title{font-weight:700;font-size:.88rem;margin-bottom:13px;}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:9px;}
+@media(max-width:380px){.form-row{grid-template-columns:1fr;}}
+.form-group{display:flex;flex-direction:column;gap:5px;}
+.form-label{font-size:.65rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px;}
+.form-select,.form-input{background:var(--s2);border:1px solid var(--border);color:var(--text);font-family:'DM Sans',sans-serif;font-size:.82rem;padding:9px 11px;border-radius:8px;outline:none;width:100%;transition:border-color .2s;}
+.form-select:focus,.form-input:focus{border-color:rgba(240,185,11,.35);}
+.form-select option{background:var(--s2);}
+.submit-btn{width:100%;background:var(--gold);color:#000;border:none;border-radius:8px;padding:10px;font-family:'DM Sans',sans-serif;font-weight:700;font-size:.83rem;cursor:pointer;margin-top:6px;transition:.15s;}
+.submit-btn:hover{background:var(--gold2);}
+.submit-btn:active{transform:scale(.98);}
+.alerts-list{display:flex;flex-direction:column;gap:7px;}
+.alert-row{background:var(--s1);border:1px solid var(--border);border-radius:var(--r);padding:11px 13px;display:flex;align-items:center;gap:9px;transition:.25s;}
+.alert-text{flex:1;font-size:.8rem;font-weight:600;}
+.alert-val{font-family:'DM Mono',monospace;font-size:.76rem;color:var(--gold);}
+.alert-del{background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:.95rem;padding:2px 4px;transition:.15s;}
+.alert-del:hover{color:var(--red);}
+
+/* CHAT */
+.chat-section{display:flex;flex-direction:column;flex:1;}
+@media(max-width:768px){.chat-section{padding:14px;padding-bottom:90px;}}
+.chat-hd{background:var(--s1);border:1px solid var(--border);border-radius:var(--r) var(--r) 0 0;padding:13px 15px;display:flex;align-items:center;gap:10px;}
+@media(min-width:769px){.chat-hd{border-radius:0;border-left:none;border-right:none;border-top:none;}}
+.eye-av{width:32px;height:32px;background:linear-gradient(135deg,#F0B90B,#ff8c00);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:.95rem;flex-shrink:0;box-shadow:0 3px 10px rgba(240,185,11,.2);}
+.eye-name{font-weight:700;font-size:.86rem;}
+.eye-persona{font-size:.66rem;color:var(--gold);font-weight:600;margin-top:1px;}
+.score-btn{margin-left:auto;background:rgba(240,185,11,.1);border:1px solid rgba(240,185,11,.2);color:var(--gold);border-radius:8px;padding:5px 10px;font-size:.72rem;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap;}
+.persona-row{display:flex;gap:5px;padding:7px 12px;background:var(--s1);border-left:1px solid var(--border);border-right:1px solid var(--border);overflow-x:auto;}
+@media(min-width:769px){.persona-row{border-left:none;border-right:none;}}
+.persona-row::-webkit-scrollbar{display:none;}
+.persona-btn{background:transparent;border:1px solid var(--border);color:var(--muted2);padding:4px 10px;border-radius:14px;font-size:.67rem;font-family:'DM Sans',sans-serif;font-weight:600;cursor:pointer;white-space:nowrap;transition:.15s;flex-shrink:0;}
+.persona-btn.active,.persona-btn:hover{border-color:rgba(240,185,11,.3);color:var(--gold);background:rgba(240,185,11,.07);}
+.chat-msgs{flex:1;overflow-y:auto;padding:13px;display:flex;flex-direction:column;gap:10px;background:var(--s1);border-left:1px solid var(--border);border-right:1px solid var(--border);scroll-behavior:smooth;min-height:280px;}
+@media(min-width:769px){
+  .chat-msgs{border-left:none;border-right:none;max-height:calc(100vh - 56px - 48px - 44px - 54px - 64px);}
+}
+.chat-msgs::-webkit-scrollbar{width:3px;}
+.chat-msgs::-webkit-scrollbar-thumb{background:var(--border);}
+.msg{display:flex;gap:7px;animation:msgIn .2s ease;}
+@keyframes msgIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+.msg.user{flex-direction:row-reverse;}
+.msg-av{width:24px;height:24px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:.72rem;flex-shrink:0;margin-top:2px;}
+.msg.ai .msg-av{background:linear-gradient(135deg,#F0B90B,#ff8c00);}
+.msg.user .msg-av{background:var(--s3);border:1px solid var(--border);}
+.msg-bubble{max-width:86%;padding:9px 12px;border-radius:10px;font-size:.8rem;line-height:1.55;}
+.msg.ai .msg-bubble{background:var(--s2);border:1px solid var(--border);border-radius:3px 10px 10px 10px;}
+.msg.user .msg-bubble{background:rgba(240,185,11,.1);border:1px solid rgba(240,185,11,.18);border-radius:10px 3px 10px 10px;}
+.msg-bubble strong{color:var(--gold);font-weight:700;}
+.tag{display:inline-block;padding:1px 5px;border-radius:4px;font-family:'DM Mono',monospace;font-size:.7rem;}
+.tag.g{background:rgba(14,203,129,.12);color:var(--green);}
+.tag.r{background:rgba(246,70,93,.12);color:var(--red);}
+.tag.y{background:rgba(240,185,11,.12);color:var(--gold);}
+.typing{display:flex;gap:4px;align-items:center;padding:3px 0;}
+.tdot{width:5px;height:5px;background:var(--gold);border-radius:50%;animation:td 1.1s ease-in-out infinite;}
+.tdot:nth-child(2){animation-delay:.18s}.tdot:nth-child(3){animation-delay:.36s}
+@keyframes td{0%,60%,100%{transform:translateY(0);opacity:.3}30%{transform:translateY(-5px);opacity:1}}
+.chips{padding:7px 11px;display:flex;flex-wrap:wrap;gap:5px;background:var(--s1);border-left:1px solid var(--border);border-right:1px solid var(--border);}
+@media(min-width:769px){.chips{border-left:none;border-right:none;}}
+.chip{background:transparent;border:1px solid var(--border);color:var(--muted2);padding:4px 9px;border-radius:13px;font-size:.67rem;font-family:'DM Sans',sans-serif;font-weight:600;cursor:pointer;transition:.15s;}
+.chip:hover{border-color:rgba(240,185,11,.3);color:var(--gold);background:rgba(240,185,11,.06);}
+.chat-in-area{display:flex;gap:7px;padding:9px 11px;background:var(--s1);border:1px solid var(--border);border-radius:0 0 var(--r) var(--r);align-items:flex-end;}
+@media(min-width:769px){.chat-in-area{border-radius:0;border-left:none;border-right:none;border-bottom:none;}}
+.chat-in{flex:1;background:var(--s2);border:1px solid var(--border);color:var(--text);font-family:'DM Sans',sans-serif;font-size:.82rem;padding:8px 11px;border-radius:8px;resize:none;outline:none;line-height:1.4;min-height:38px;max-height:90px;transition:border-color .2s;}
+.chat-in:focus{border-color:rgba(240,185,11,.3);}
+.chat-in::placeholder{color:var(--muted);}
+.send-btn{background:var(--gold);color:#000;border:none;width:38px;height:38px;border-radius:8px;cursor:pointer;font-size:.95rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:.15s;}
+.send-btn:hover{background:var(--gold2);}
+.send-btn:active{transform:scale(.94);}
+.send-btn:disabled{opacity:.35;cursor:not-allowed;transform:none;}
+
+/* BOTTOM NAV */
+.bottom-nav{display:none;position:fixed;bottom:0;left:0;right:0;z-index:200;background:rgba(7,9,12,.97);border-top:1px solid var(--border);backdrop-filter:blur(16px);}
+@media(max-width:768px){.bottom-nav{display:block;}}
+.bnav-inner{display:flex;justify-content:space-around;padding:6px 0 calc(6px + env(safe-area-inset-bottom,0px));}
+.bn-btn{display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 10px;cursor:pointer;color:var(--muted2);font-size:.58rem;font-weight:600;border:none;background:transparent;font-family:'DM Sans',sans-serif;transition:.15s;}
+.bn-btn .bi{font-size:1.15rem;}
+.bn-btn.active{color:var(--gold);}
+
+/* SCORE MODAL */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.78);backdrop-filter:blur(8px);z-index:500;align-items:center;justify-content:center;padding:16px;}
+.overlay.show{display:flex;}
+.modal{background:var(--s1);border:1px solid rgba(240,185,11,.2);border-radius:18px;padding:22px;width:100%;max-width:420px;animation:mIn .25s cubic-bezier(.16,1,.3,1);max-height:90vh;overflow-y:auto;}
+@keyframes mIn{from{opacity:0;transform:scale(.93)}to{opacity:1;transform:scale(1)}}
+.modal-title{font-family:'Bebas Neue',sans-serif;font-size:1.5rem;letter-spacing:1px;}
+.modal-sub{font-size:.74rem;color:var(--muted2);margin-top:2px;margin-bottom:16px;}
+.big-score{font-family:'Bebas Neue',sans-serif;font-size:4.5rem;line-height:1;color:var(--gold);text-align:center;margin:6px 0 3px;}
+.score-cats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px;}
+.sc-cat{background:var(--s2);border:1px solid var(--border);border-radius:9px;padding:10px 12px;}
+.sc-cat-name{font-size:.62rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px;}
+.sc-cat-val{font-family:'DM Mono',monospace;font-size:.95rem;margin-top:3px;}
+.sc-cat-bar{height:3px;background:var(--border);border-radius:2px;margin-top:5px;overflow:hidden;}
+.sc-cat-fill{height:100%;border-radius:2px;}
+.ai-advice{margin-top:13px;background:rgba(240,185,11,.05);border:1px solid rgba(240,185,11,.12);border-radius:9px;padding:11px;font-size:.77rem;color:var(--muted2);line-height:1.6;}
+.modal-close{display:block;width:100%;margin-top:14px;background:var(--s2);border:1px solid var(--border);color:var(--text);padding:10px;border-radius:8px;font-family:'DM Sans',sans-serif;font-weight:600;cursor:pointer;transition:.15s;font-size:.82rem;}
+.modal-close:hover{border-color:var(--gold);color:var(--gold);}
+</style>
+</head>
+<body>
+
+<!-- SCORE MODAL -->
+<div class="overlay" id="scoreOverlay">
+  <div class="modal">
+    <div class="modal-title">🏆 Portfolio Score</div>
+    <div class="modal-sub">AI-powered analysis across 4 dimensions</div>
+    <div class="big-score">84</div>
+    <div style="text-align:center;color:var(--green);font-weight:700;font-size:.85rem;">STRONG PORTFOLIO</div>
+    <div style="text-align:center;font-size:.72rem;color:var(--muted2);margin-top:3px;">Top 18% of HodlEye users this week</div>
+    <div class="score-cats" id="scoreCats"></div>
+    <div class="ai-advice" id="aiAdvice">👁️ Eye AI is analyzing your portfolio…</div>
+    <button class="modal-close" onclick="closeScore()">Close</button>
+  </div>
+</div>
+
+<!-- HEADER -->
+<header>
+  <div class="logo"><div class="logo-icon">👁️</div>Hodl<em>Eye</em></div>
+  <div class="hd-right">
+    <div class="live-pill">LIVE</div>
+    <div class="bnb-pill"><span class="sym">BNB</span><span>$612.40</span><span class="chg">▲2.1%</span></div>
+    <button class="connect-btn" onclick="alert('Wallet connect — coming in v2! 🔜')">Connect Wallet</button>
+  </div>
+</header>
+
+<div class="page">
+
+  <!-- LEFT COL -->
+  <div class="left-col">
+
+    <!-- TABS -->
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchView('portfolio',this)">📊 Portfolio</button>
+      <button class="tab-btn" onclick="switchView('markets',this)">📈 Markets</button>
+      <button class="tab-btn" onclick="switchView('earn',this)">💎 BNB Earn</button>
+      <button class="tab-btn" onclick="switchView('alerts',this)">🔔 Alerts</button>
+    </div>
+
+    <!-- PORTFOLIO -->
+    <div class="view active" id="view-portfolio">
+      <div class="score-banner" onclick="openScore()">
+        <div class="score-circle"><div class="score-num">84</div></div>
+        <div class="score-info"><div class="score-title">AI Portfolio Score</div><div class="score-sub">Tap for full breakdown & AI advice →</div></div>
+        <div class="score-badge">STRONG</div>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card"><div class="stat-label">Total Value</div><div class="stat-val">$48,612</div><div class="stat-chg up">▲ +2.71% today</div></div>
+        <div class="stat-card"><div class="stat-label">Total P&L</div><div class="stat-val">+$6,840</div><div class="stat-chg up">▲ +16.4% all-time</div></div>
+        <div class="stat-card"><div class="stat-label">24h Volume</div><div class="stat-val">$3,210</div><div class="stat-chg down">▼ -8.3% vs yesterday</div></div>
+        <div class="stat-card"><div class="stat-label">Assets</div><div class="stat-val">7</div><div class="stat-chg up">Across 3 chains</div></div>
+      </div>
+      <div class="bnb-spot">
+        <div class="bnb-spot-hd">
+          <div class="bnb-icon">B</div>
+          <div><div class="bnb-spot-title">BNB Chain Spotlight</div><div class="bnb-spot-sub">Your home chain — live metrics</div></div>
+        </div>
+        <div class="bnb-metrics">
+          <div class="bnb-m"><div class="bm-label">BNB Price</div><div class="bm-val" style="color:var(--gold)">$612.40</div><div class="bm-sub up">▲ 3.1%</div></div>
+          <div class="bnb-m"><div class="bm-label">Your BNB</div><div class="bm-val">8.5 BNB</div><div class="bm-sub">≈ $5,205</div></div>
+          <div class="bnb-m"><div class="bm-label">Earn APY</div><div class="bm-val" style="color:var(--green)">4.8%</div><div class="bm-sub">Flexible</div></div>
+          <div class="bnb-m"><div class="bm-label">BSC Gas</div><div class="bm-val">0.8 Gwei</div><div class="bm-sub" style="color:var(--green)">🟢 Low</div></div>
+        </div>
+      </div>
+      <div class="holdings-card">
+        <div class="holdings-hd">
+          <div class="holdings-title">Holdings</div>
+          <div class="filter-row">
+            <button class="fbtn active" onclick="filterH('all',this)">All</button>
+            <button class="fbtn" onclick="filterH('gainers',this)">Gainers</button>
+            <button class="fbtn" onclick="filterH('losers',this)">Losers</button>
+          </div>
+        </div>
+        <div class="table-wrap"><table><thead><tr><th>Asset</th><th>Price</th><th>24h</th><th>Amount</th><th>Value</th><th>7d</th></tr></thead><tbody id="htbody"></tbody></table></div>
+      </div>
+      <div class="two-col">
+        <div class="mini-card"><div class="mini-title">Allocation</div><div class="alloc-list" id="allocList"></div></div>
+        <div class="mini-card">
+          <div class="mini-title">Recent Transactions</div>
+          <div class="txn-list">
+            <div class="txn-row"><span class="txn-type buy">BUY</span><span class="txn-name">BNB</span><span class="txn-amt">+0.5 · $306</span></div>
+            <div class="txn-row"><span class="txn-type sell">SELL</span><span class="txn-name">ETH</span><span class="txn-amt">-0.2 · $620</span></div>
+            <div class="txn-row"><span class="txn-type buy">BUY</span><span class="txn-name">SOL</span><span class="txn-amt">+5 · $710</span></div>
+            <div class="txn-row"><span class="txn-type buy">BUY</span><span class="txn-name">BTC</span><span class="txn-amt">+0.01 · $830</span></div>
+            <div class="txn-row"><span class="txn-type sell">SELL</span><span class="txn-name">MATIC</span><span class="txn-amt">-200 · $148</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MARKETS -->
+    <div class="view" id="view-markets">
+      <div class="market-list" id="marketList"></div>
+    </div>
+
+    <!-- EARN -->
+    <div class="view" id="view-earn">
+      <div class="earn-grid">
+        <div class="earn-card"><div class="earn-icon">💰</div><div class="earn-name">BNB Flexible Savings</div><div class="earn-desc">Earn yield on your BNB with no lock-up. Withdraw anytime.</div><div class="earn-apy">4.8%</div><div class="earn-apy-label">APY</div><button class="earn-btn" onclick="askEye('Tell me about BNB Flexible Savings — risks, benefits, and how to get started.')">Start Earning</button></div>
+        <div class="earn-card"><div class="earn-icon">🔒</div><div class="earn-name">BNB Locked 30-Day</div><div class="earn-desc">Lock BNB for 30 days for a higher fixed yield.</div><div class="earn-apy">7.2%</div><div class="earn-apy-label">APY</div><button class="earn-btn" onclick="askEye('Tell me about BNB Locked 30-Day savings — is it worth locking up for 30 days given my portfolio?')">Start Earning</button></div>
+        <div class="earn-card"><div class="earn-icon">🌊</div><div class="earn-name">BNB Liquidity Pool</div><div class="earn-desc">Provide BNB/USDT liquidity and earn trading fees.</div><div class="earn-apy">12.4%</div><div class="earn-apy-label">APY (variable)</div><button class="earn-btn" onclick="askEye('Explain BNB liquidity pools — what is impermanent loss and should I add liquidity given my portfolio?')">Add Liquidity</button></div>
+        <div class="earn-card"><div class="earn-icon">🎯</div><div class="earn-name">Auto-Compound Vault</div><div class="earn-desc">Auto-reinvest earnings daily for maximum compounding.</div><div class="earn-apy">9.1%</div><div class="earn-apy-label">APY (compounded)</div><button class="earn-btn" onclick="askEye('How does the auto-compound vault work on BNB Chain, and is 9.1% APY realistic long-term?')">Deposit Now</button></div>
+      </div>
+    </div>
+
+    <!-- ALERTS -->
+    <div class="view" id="view-alerts">
+      <div class="alert-form">
+        <div class="form-title">🔔 Create Price Alert</div>
+        <div class="form-row">
+          <div class="form-group"><div class="form-label">Asset</div><select class="form-select" id="alertAsset"><option>BTC</option><option>ETH</option><option selected>BNB</option><option>SOL</option><option>MATIC</option><option>LINK</option><option>DOT</option></select></div>
+          <div class="form-group"><div class="form-label">Condition</div><select class="form-select" id="alertCond"><option>Price above</option><option>Price below</option><option>Change % above</option><option>Change % below</option></select></div>
+        </div>
+        <div class="form-group" style="margin-bottom:9px;"><div class="form-label">Target Value</div><input class="form-input" id="alertVal" type="number" placeholder="e.g. 650"/></div>
+        <button class="submit-btn" onclick="createAlert()">+ Create Alert</button>
+      </div>
+      <div class="alerts-list" id="alertsList">
+        <div class="alert-row"><span style="font-size:.95rem">🔔</span><span class="alert-text">BTC — Price above</span><span class="alert-val">$90,000</span><button class="alert-del" onclick="removeAlert(this)">🗑️</button></div>
+        <div class="alert-row"><span style="font-size:.95rem">🔔</span><span class="alert-text">ETH — Price below</span><span class="alert-val">$2,800</span><button class="alert-del" onclick="removeAlert(this)">🗑️</button></div>
+      </div>
+    </div>
+
+  </div><!-- /left-col -->
+
+  <!-- RIGHT COL (chat) -->
+  <div class="right-col">
+    <div class="chat-section">
+      <div class="chat-hd">
+        <div class="eye-av">👁️</div>
+        <div><div class="eye-name">Eye AI</div><div class="eye-persona" id="personaLabel">🔥 Degen Mode</div></div>
+        <button class="score-btn" onclick="openScore()">🏆 Score: 84</button>
+      </div>
+      <div class="persona-row">
+        <button class="persona-btn active" onclick="setPersona(this,'🔥 Degen Mode','You are Eye AI in Degen Mode — hype, bullish crypto bro. Use slang: LFG, WAGMI, bags, rekt, moon. Punchy and entertaining with emojis.')">🔥 Degen</button>
+        <button class="persona-btn" onclick="setPersona(this,'🦉 Oracle','You are Eye AI as a calm, wise crypto oracle. Measured, analytical, references historical cycles. Speak with gravitas and depth.')">🦉 Oracle</button>
+        <button class="persona-btn" onclick="setPersona(this,'📚 Teacher','You are Eye AI as a friendly crypto educator. Explain clearly to a smart beginner. Use analogies, define jargon, be encouraging.')">📚 Teacher</button>
+        <button class="persona-btn" onclick="setPersona(this,'📊 Analyst','You are Eye AI as a professional quant analyst. Concise, data-driven, use technical terms. No fluff.')">📊 Analyst</button>
+      </div>
+      <div class="chat-msgs" id="chatMsgs">
+        <div class="msg ai">
+          <div class="msg-av">👁️</div>
+          <div class="msg-bubble">Yo! 👁️ <strong>Eye AI</strong> on watch.<br><br>Portfolio <span class="tag g">▲ 2.71%</span> today — SOL is <span class="tag g">ripping +8.4%</span> and carrying the whole bag. Score is <strong>84/100</strong> <span class="tag y">STRONG</span>. LFG 🚀</div>
+        </div>
+      </div>
+      <div class="chips" id="chips">
+        <button class="chip" onclick="sendChip(this)">📊 Full breakdown</button>
+        <button class="chip" onclick="sendChip(this)">🔥 Best performers</button>
+        <button class="chip" onclick="sendChip(this)">⚠️ Risk analysis</button>
+        <button class="chip" onclick="sendChip(this)">💡 Rebalance tips</button>
+        <button class="chip" onclick="sendChip(this)">💎 BNB strategy</button>
+        <button class="chip" onclick="sendChip(this)">🎯 What should I do?</button>
+      </div>
+      <div class="chat-in-area">
+        <textarea class="chat-in" id="chatIn" placeholder="Ask Eye AI anything…" rows="1" onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+        <button class="send-btn" id="sendBtn" onclick="sendMsg()">➤</button>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /page -->
+
+<!-- BOTTOM NAV -->
+<nav class="bottom-nav">
+  <div class="bnav-inner">
+    <button class="bn-btn active" id="bn-portfolio" onclick="switchView('portfolio',null,this)"><span class="bi">📊</span>Portfolio</button>
+    <button class="bn-btn" id="bn-markets" onclick="switchView('markets',null,this)"><span class="bi">📈</span>Markets</button>
+    <button class="bn-btn" id="bn-earn" onclick="switchView('earn',null,this)"><span class="bi">💎</span>Earn</button>
+    <button class="bn-btn" id="bn-alerts" onclick="switchView('alerts',null,this)"><span class="bi">🔔</span>Alerts</button>
+    <button class="bn-btn" onclick="scrollToChat()"><span class="bi">👁️</span>Eye AI</button>
+  </div>
+</nav>
+
+<script>
+// DATA
+const holdings=[
+  {sym:'BTC',name:'Bitcoin', icon:'₿', color:'#F7931A',bg:'rgba(247,147,26,.15)',price:83200,chg:1.2, amt:0.32,val:26624,spark:[5,4,6,5,7,6,8]},
+  {sym:'ETH',name:'Ethereum',icon:'Ξ', color:'#627EEA',bg:'rgba(98,126,234,.15)',price:3100, chg:-0.8,amt:2.4, val:7440, spark:[7,6,5,6,4,5,5]},
+  {sym:'BNB',name:'BNB',     icon:'B', color:'#F0B90B',bg:'rgba(240,185,11,.15)',price:612,  chg:3.1, amt:8.5, val:5202, spark:[4,5,5,6,7,8,9]},
+  {sym:'SOL',name:'Solana',  icon:'◎', color:'#9945FF',bg:'rgba(153,69,255,.15)',price:142,  chg:8.4, amt:32,  val:4544, spark:[3,4,5,6,8,9,10]},
+  {sym:'MATIC',name:'Polygon',icon:'⬡',color:'#8247E5',bg:'rgba(130,71,229,.15)',price:0.74, chg:-2.3,amt:4200,val:3108, spark:[8,7,6,7,5,4,5]},
+  {sym:'LINK',name:'Chainlink',icon:'🔗',color:'#2A5ADA',bg:'rgba(42,90,218,.15)',price:14.2,chg:0.5, amt:110, val:1562, spark:[5,6,5,6,6,7,7]},
+  {sym:'DOT', name:'Polkadot',icon:'●',color:'#E6007A',bg:'rgba(230,0,122,.15)', price:8.8,  chg:-1.1,amt:16,  val:141,  spark:[6,5,6,4,5,4,4]},
+];
+const clrs=['#F7931A','#627EEA','#F0B90B','#9945FF','#8247E5','#2A5ADA','#E6007A'];
+const total=holdings.reduce((s,h)=>s+h.val,0);
+
+// Holdings table
+function renderH(filter){
+  const tb=document.getElementById('htbody');tb.innerHTML='';
+  const d=filter==='gainers'?holdings.filter(h=>h.chg>0):filter==='losers'?holdings.filter(h=>h.chg<0):holdings;
+  d.forEach(h=>{
+    const u=h.chg>=0;
+    const bars=h.spark.map(v=>`<div class="spark-b" style="height:${v*2+2}px;background:${u?'var(--green)':'var(--red)'};opacity:.6"></div>`).join('');
+    tb.innerHTML+=`<tr><td><div class="asset-cell"><div class="a-icon" style="background:${h.bg};color:${h.color}">${h.icon}</div><div><div class="a-name">${h.name}</div><div class="a-sym">${h.sym}</div></div></div></td><td class="mono">$${h.price.toLocaleString()}</td><td class="${u?'up':'down'} mono">${u?'▲':'▼'}${Math.abs(h.chg)}%</td><td class="mono" style="color:var(--muted2)">${h.amt.toLocaleString()} ${h.sym}</td><td class="mono">$${h.val.toLocaleString()}</td><td><div class="spark">${bars}</div></td></tr>`;
+  });
+}
+renderH('all');
+function filterH(f,btn){document.querySelectorAll('.fbtn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');renderH(f);}
+
+// Allocation
+const al=document.getElementById('allocList');
+holdings.slice(0,6).forEach((h,i)=>{
+  const p=((h.val/total)*100).toFixed(1);
+  al.innerHTML+=`<div class="alloc-row"><div class="alloc-dot" style="background:${clrs[i]}"></div><div class="alloc-name">${h.sym}</div><div class="alloc-bar-wrap"><div class="alloc-bar-fill" data-w="${p}" style="background:${clrs[i]};width:0%"></div></div><div class="alloc-pct">${p}%</div></div>`;
+});
+setTimeout(()=>document.querySelectorAll('.alloc-bar-fill').forEach(el=>el.style.width=el.dataset.w+'%'),400);
+
+// Markets
+const ml=document.getElementById('marketList');
+holdings.forEach((h,i)=>{
+  const u=h.chg>=0;
+  ml.innerHTML+=`<div class="market-row"><div class="a-icon" style="background:${h.bg};color:${h.color}">${h.icon}</div><div><div class="m-name">${h.name}</div><div class="m-sym">${h.sym}/USDT</div></div><div class="m-right"><div class="m-price mono">$${h.price.toLocaleString()}</div><div class="m-chg ${u?'up':'down'}">${u?'▲':'▼'}${Math.abs(h.chg)}%</div></div></div>`;
+});
+
+// Score modal
+const cats=[{name:'Diversification',val:78,color:'#0ecb81'},{name:'Performance',val:91,color:'#F0B90B'},{name:'Risk Management',val:82,color:'#3b82f6'},{name:'BNB Exposure',val:85,color:'#F0B90B'}];
+const scEl=document.getElementById('scoreCats');
+cats.forEach(c=>{scEl.innerHTML+=`<div class="sc-cat"><div class="sc-cat-name">${c.name}</div><div class="sc-cat-val" style="color:${c.color}">${c.val}/100</div><div class="sc-cat-bar"><div class="sc-cat-fill" style="width:${c.val}%;background:${c.color}"></div></div></div>`;});
+
+function openScore(){
+  document.getElementById('scoreOverlay').classList.add('show');
+  const adv=document.getElementById('aiAdvice');
+  adv.innerHTML='👁️ Eye AI is analyzing your portfolio…';
+  callAI('Give a 3-sentence portfolio score analysis. Score 84/100. Note BTC is 54% (overweight), SOL is up 8.4% (star), suggest one specific action. Be concise.',false)
+    .then(t=>{adv.innerHTML='💡 '+fmtAI(t);})
+    .catch(()=>{adv.textContent='Your BTC at 54% is heavy — trim 5-10% into BNB Earn for passive yield. SOL is your star today at +8.4%. Score of 84 is solid but diversification has room to grow.';});
+}
+function closeScore(){document.getElementById('scoreOverlay').classList.remove('show');}
+document.getElementById('scoreOverlay').addEventListener('click',e=>{if(e.target===e.currentTarget)closeScore();});
+
+// Tabs/Views
+function switchView(name,tabBtn,bnBtn){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById('view-'+name).classList.add('active');
+  if(tabBtn){document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));tabBtn.classList.add('active');}
+  document.querySelectorAll('.bn-btn').forEach(b=>b.classList.remove('active'));
+  const bnTarget=bnBtn||document.getElementById('bn-'+name);
+  if(bnTarget)bnTarget.classList.add('active');
+  if(!tabBtn){document.querySelectorAll('.tab-btn').forEach(b=>{if(b.textContent.toLowerCase().includes(name)){b.classList.add('active');}});}
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function scrollToChat(){
+  document.querySelector('.right-col').scrollIntoView({behavior:'smooth'});
+  setTimeout(()=>document.getElementById('chatIn').focus(),400);
+}
+
+// Alerts
+function createAlert(){
+  const asset=document.getElementById('alertAsset').value;
+  const cond=document.getElementById('alertCond').value;
+  const val=document.getElementById('alertVal').value;
+  if(!val){document.getElementById('alertVal').focus();return;}
+  const row=document.createElement('div');row.className='alert-row';row.style.opacity='0';
+  row.innerHTML=`<span style="font-size:.95rem">🔔</span><span class="alert-text">${asset} — ${cond}</span><span class="alert-val">$${parseFloat(val).toLocaleString()}</span><button class="alert-del" onclick="removeAlert(this)">🗑️</button>`;
+  document.getElementById('alertsList').prepend(row);
+  document.getElementById('alertVal').value='';
+  setTimeout(()=>{row.style.transition='.25s';row.style.opacity='1';},10);
+}
+function removeAlert(btn){
+  const row=btn.closest('.alert-row');
+  row.style.transition='.2s';row.style.opacity='0';row.style.transform='translateX(20px)';
+  setTimeout(()=>row.remove(),200);
+}
+
+// Earn -> ask Eye AI and scroll to chat
+function askEye(msg){
+  scrollToChat();
+  setTimeout(()=>sendMsg(msg),500);
+}
+
+// CHAT
+let persona='You are Eye AI in Degen Mode — hype, bullish crypto bro. Use slang: LFG, WAGMI, bags, rekt, moon. Punchy and entertaining with emojis.';
+let history=[];let loading=false;
+const ctx=`Portfolio: $48,612 total (▲2.71% today). BTC 0.32=$26,624(54.8%)▲1.2%, ETH 2.4=$7,440(15.3%)▼0.8%, BNB 8.5=$5,202(10.7%)▲3.1%, SOL 32=$4,544(9.3%)▲8.4%, MATIC 4200=$3,108(6.4%)▼2.3%, LINK 110=$1,562(3.2%)▲0.5%, DOT 16=$141(0.3%)▼1.1%. All-time P&L +$6,840(+16.4%). BNB Earn: 4.8% flexible, 7.2% locked 30d. BSC Gas 0.8 Gwei low. AI Score 84/100. App: HodlEye AI Portfolio Tracker on Binance ecosystem. Answer in 3-5 sentences. Use **bold** for emphasis. Use ▲/▼ for changes.`;
+
+async function callAI(msg,addHist=true){
+  const sys=persona+'\n\n'+ctx;
+  const msgs=addHist?[...history,{role:'user',content:msg}]:[{role:'user',content:msg}];
+  const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,system:sys,messages:msgs})});
+  const d=await r.json();
+  return d.content?.map(b=>b.text||'').join('')||'No response.';
+}
+function fmtAI(t){
+  return t.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
+    .replace(/▲\s*([\d.]+%?)/g,'<span class="tag g">▲ $1</span>')
+    .replace(/▼\s*([\d.]+%?)/g,'<span class="tag r">▼ $1</span>')
+    .replace(/\n/g,'<br>');
+}
+function appendMsg(role,html,isHTML){
+  const w=document.getElementById('chatMsgs');
+  const d=document.createElement('div');d.className='msg '+role;
+  const av=document.createElement('div');av.className='msg-av';av.textContent=role==='ai'?'👁️':'👤';
+  const b=document.createElement('div');b.className='msg-bubble';
+  isHTML?b.innerHTML=html:b.textContent=html;
+  d.append(av,b);w.appendChild(d);w.scrollTop=w.scrollHeight;
+}
+function showTyping(){
+  const w=document.getElementById('chatMsgs');
+  const d=document.createElement('div');d.className='msg ai';d.id='typing';
+  const av=document.createElement('div');av.className='msg-av';av.textContent='👁️';
+  const b=document.createElement('div');b.className='msg-bubble';
+  b.innerHTML='<div class="typing"><div class="tdot"></div><div class="tdot"></div><div class="tdot"></div></div>';
+  d.append(av,b);w.appendChild(d);w.scrollTop=w.scrollHeight;
+}
+function rmTyping(){const t=document.getElementById('typing');if(t)t.remove();}
+async function sendMsg(override){
+  if(loading)return;
+  const inp=document.getElementById('chatIn');
+  const text=override||inp.value.trim();
+  if(!text)return;
+  inp.value='';inp.style.height='auto';
+  document.getElementById('chips').style.display='none';
+  appendMsg('user',text,false);
+  history.push({role:'user',content:text});
+  loading=true;document.getElementById('sendBtn').disabled=true;
+  showTyping();
+  try{
+    const reply=await callAI(text);
+    rmTyping();appendMsg('ai',fmtAI(reply),true);
+    history.push({role:'assistant',content:reply});
+  }catch(e){rmTyping();appendMsg('ai','⚠️ Connection issue. Please check your network.',false);}
+  loading=false;document.getElementById('sendBtn').disabled=false;
+}
+function setPersona(btn,label,prompt){
+  document.querySelectorAll('.persona-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');persona=prompt;
+  document.getElementById('personaLabel').textContent=label;
+  appendMsg('ai','Switched to <strong>'+label+'</strong>. Ask me anything! 👁️',true);
+}
+function sendChip(btn){
+  const text=btn.textContent.replace(/^..\s*/,'');
+  document.getElementById('chips').style.display='none';
+  sendMsg(text);
+}
+function handleKey(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMsg();}}
+function autoResize(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,90)+'px';}
+</script>
+</body>
+</html>
